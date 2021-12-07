@@ -4,37 +4,37 @@ func (c *Command) CheckValid() error {
 	switch c.Code {
 	case ReadDos01, ReadDis02:
 		if c.Corv < 1 || c.Corv > MaxBools {
-			return formatErr("Count %d out of range [1, %d]", c.Corv, MaxBools)
+			return formatErr("count %d out of range [1, %d]", c.Corv, MaxBools)
 		}
 	case ReadWos03, ReadWis04:
 		if c.Corv < 1 || c.Corv > MaxWords {
-			return formatErr("Count %d out of range [1, %d]", c.Corv, MaxWords)
+			return formatErr("count %d out of range [1, %d]", c.Corv, MaxWords)
 		}
 	case WriteDos15:
 		count := len(c.Bools)
 		if count < 1 || count > MaxBools {
-			return formatErr("Count %d out of range [1, %d]", count, MaxBools)
+			return formatErr("count %d out of range [1, %d]", count, MaxBools)
 		}
 		if uint16(count) != c.Corv {
-			return formatErr("Count mismatch %d got %d", count, c.Corv)
+			return formatErr("count mismatch %d got %d", count, c.Corv)
 		}
 	case WriteWos16:
 		count := len(c.Words)
 		if count < 1 || count > MaxWords {
-			return formatErr("Count %d out of range [1, %d]", count, MaxWords)
+			return formatErr("count %d out of range [1, %d]", count, MaxWords)
 		}
 		if uint16(count) != c.Corv {
-			return formatErr("Count mismatch %d got %d", count, c.Corv)
+			return formatErr("count mismatch %d got %d", count, c.Corv)
 		}
 	case WriteDo05:
 		if c.Corv != 0 && c.Corv != TrueWord {
-			return formatErr("Corv invalid %04x expected %04x or %04x", c.Corv, 0, TrueWord)
+			return formatErr("corv invalid %04x expected %04x or %04x", c.Corv, 0, TrueWord)
 		}
 		return nil
 	case WriteWo06:
 		return nil
 	default:
-		return formatErr("Code unsupported %d", c.Code)
+		return formatErr("code unsupported %d", c.Code)
 	}
 	return nil
 }
@@ -43,11 +43,11 @@ func (c *Command) CheckException(buf []byte) (err error) {
 	_slave := buf[0]
 	_code80 := buf[1]
 	if _slave != c.Slave {
-		err = formatErr("Slave mismatch got %02x expected %02x", _slave, c.Slave)
+		err = formatErr("slave mismatch got %02x expected %02x", _slave, c.Slave)
 		return
 	}
 	if _code80 != (c.Code | 0x80) {
-		err = formatErr("Code80 mismatch got %02x expected %02x | 0x80", _code80, c.Code)
+		err = formatErr("code80 mismatch got %02x expected %02x | 0x80", _code80, c.Code)
 		return
 	}
 	return
@@ -61,13 +61,13 @@ func (c *Command) CheckResponse(buf []byte) error {
 		_bytes := buf[2]
 		bytes := c.ResponseBytes()
 		if _slave != c.Slave {
-			return formatErr("Slave mismatch got %02x expected %02x", _slave, c.Slave)
+			return formatErr("slave mismatch got %02x expected %02x", _slave, c.Slave)
 		}
 		if _code != c.Code {
-			return formatErr("Code mismatch got %02x expected %02x", _code, c.Code)
+			return formatErr("code mismatch got %02x expected %02x", _code, c.Code)
 		}
 		if _bytes != bytes {
-			return formatErr("Byte count mismatch got %d expected %d", _bytes, bytes)
+			return formatErr("byte count mismatch got %d expected %d", _bytes, bytes)
 		}
 		return nil
 	case WriteDo05, WriteWo06, WriteDos15, WriteWos16:
@@ -76,20 +76,20 @@ func (c *Command) CheckResponse(buf []byte) error {
 		_address := encodeWord(buf[2], buf[3])
 		_corv := encodeWord(buf[4], buf[5])
 		if _slave != c.Slave {
-			return formatErr("Slave mismatch got %02x expected %02x", _slave, c.Slave)
+			return formatErr("slave mismatch got %02x expected %02x", _slave, c.Slave)
 		}
 		if _code != c.Code {
-			return formatErr("Code mismatch got %02x expected %02x", _code, c.Code)
+			return formatErr("code mismatch got %02x expected %02x", _code, c.Code)
 		}
 		if _address != c.Address {
-			return formatErr("Address mismatch got %04x expected %04x", _address, c.Address)
+			return formatErr("address mismatch got %04x expected %04x", _address, c.Address)
 		}
 		if _corv != c.Corv {
-			return formatErr("Corv mismatch got %04x expected %04x", _corv, c.Corv)
+			return formatErr("corv mismatch got %04x expected %04x", _corv, c.Corv)
 		}
 		return nil
 	default:
-		return formatErr("Code unsupported %d", c.Code)
+		return formatErr("code unsupported %d", c.Code)
 	}
 }
 
@@ -196,7 +196,7 @@ func (c *Command) DecodeRequest(buf []byte) error {
 		_bytes := buf[6]
 		bytes := bytesForBools(c.Corv)
 		if _bytes != bytes {
-			return formatErr("Byte count mismatch got %d expected %d", _bytes, bytes)
+			return formatErr("byte count mismatch got %d expected %d", _bytes, bytes)
 		}
 		c.Bools = make([]bool, c.Corv)
 		decodeBools(buf[7:], c.Bools)
@@ -204,7 +204,7 @@ func (c *Command) DecodeRequest(buf []byte) error {
 		_bytes := buf[6]
 		bytes := bytesForWords(c.Corv)
 		if _bytes != bytes {
-			return formatErr("Byte count mismatch got %d expected %d", _bytes, bytes)
+			return formatErr("byte count mismatch got %d expected %d", _bytes, bytes)
 		}
 		c.Words = make([]uint16, c.Corv)
 		decodeWords(buf[7:], c.Words)

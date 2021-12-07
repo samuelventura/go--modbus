@@ -27,7 +27,7 @@ func ApplyToTransport(ci *Command, p Protocol, t Transport, toms int) (co *Comma
 	}
 	write := len(freq)
 	if _write != write {
-		err = formatErr("Write mismatch got %d expected %d", _write, write)
+		err = formatErr("write mismatch got %d expected %d", _write, write)
 		return
 	}
 	reslen := ci.ResponseLength()
@@ -42,7 +42,7 @@ func ApplyToTransport(ci *Command, p Protocol, t Transport, toms int) (co *Comma
 		if err != nil {
 			return
 		}
-		err = formatErr("ModbusException %02x", res[2])
+		err = formatErr("modbusException %02x", res[2])
 		return
 	}
 	if err != nil {
@@ -51,7 +51,7 @@ func ApplyToTransport(ci *Command, p Protocol, t Transport, toms int) (co *Comma
 	trace("t<", fres[:_read])
 	read := len(fres)
 	if _read != read {
-		err = formatErr("Read mismatch got %d expected %d", _read, read)
+		err = formatErr("read mismatch got %d expected %d", _read, read)
 		return
 	}
 	err = p.CheckWrapper(fres, reslen)

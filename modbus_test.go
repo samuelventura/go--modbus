@@ -23,7 +23,7 @@ func TestModbus(t *testing.T) {
 }
 
 func testProtocol(t *testing.T, proto Protocol) {
-	log.Println("Protocol", reflect.TypeOf(proto))
+	log.Println("protocol", reflect.TypeOf(proto))
 	model, master, err := setupMasterSlave(proto)
 	ifErrFatal(t, err)
 	testModelMaster(t, model, master)
@@ -56,8 +56,8 @@ func testModelMaster(t *testing.T, model Model, master CloseableMaster) {
 	}
 
 	err = master.WriteDo(0xFF, 0xFFFF, false)
-	if !strings.HasPrefix(err.Error(), fmt.Sprintf("ModbusException %02x", ^WriteDo05)) {
-		t.Fatalf("Exception expected: %s", err.Error())
+	if !strings.HasPrefix(err.Error(), fmt.Sprintf("modbusException %02x", ^WriteDo05)) {
+		t.Fatalf("exception expected: %s", err.Error())
 	}
 	max := 0x10001
 	start := time.Now().UnixNano()
@@ -281,7 +281,7 @@ func oneSlave(proto Protocol, trans Transport, exec Executor, toms int) (err err
 			return err
 		}
 		if c != len(buf) {
-			return formatErr("Partial write %d of %d", c, len(buf))
+			return formatErr("partial write %d of %d", c, len(buf))
 		}
 	}
 }
@@ -297,7 +297,7 @@ func setupMasterSlave(proto Protocol) (model *MapModel, master CloseableMaster, 
 		defer listen.Close()
 		input, err := listen.Accept()
 		if err != nil {
-			trace("Accept failed", err)
+			trace("accept failed", err)
 			return
 		}
 		itrans := NewConnTransport(input)
@@ -318,7 +318,7 @@ func assertBoolEqualErr(t *testing.T, err error, a, b bool) {
 		t.Fatal(err)
 	}
 	if a != b {
-		t.Fatalf("Val mismatch %t %t", a, b)
+		t.Fatalf("val mismatch %t %t", a, b)
 	}
 }
 
@@ -331,11 +331,11 @@ func assertBoolsEqualErr(t *testing.T, err error, a, b []bool) {
 
 func assertBoolsEqual(t *testing.T, a, b []bool) {
 	if len(a) != len(b) {
-		t.Fatalf("Len mismatch %d %d", len(a), len(b))
+		t.Fatalf("len mismatch %d %d", len(a), len(b))
 	}
 	for i, v := range a {
 		if v != b[i] {
-			t.Fatalf("Val mismatch at %d %t %t", i, v, b[i])
+			t.Fatalf("val mismatch at %d %t %t", i, v, b[i])
 		}
 	}
 }
@@ -345,7 +345,7 @@ func assertWordEqualErr(t *testing.T, err error, a, b uint16) {
 		t.Fatal(err)
 	}
 	if a != b {
-		t.Fatalf("Val mismatch %04x %04x", a, b)
+		t.Fatalf("val mismatch %04x %04x", a, b)
 	}
 }
 
@@ -358,11 +358,11 @@ func assertWordsEqualErr(t *testing.T, err error, a, b []uint16) {
 
 func assertWordsEqual(t *testing.T, a, b []uint16) {
 	if len(a) != len(b) {
-		t.Fatalf("Len mismatch %d %d", len(a), len(b))
+		t.Fatalf("len mismatch %d %d", len(a), len(b))
 	}
 	for i, v := range a {
 		if v != b[i] {
-			t.Fatalf("Val mismatch at %d %04x %04x", i, v, b[i])
+			t.Fatalf("val mismatch at %d %04x %04x", i, v, b[i])
 		}
 	}
 }

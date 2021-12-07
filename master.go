@@ -1,13 +1,13 @@
 package modbus
 
 type closableMaster struct {
-	exec  Executor
-	close func() error
+	exec   Executor
+	closer func() error
 }
 
 func (m *closableMaster) Close() error {
-	if m.close != nil {
-		return m.close()
+	if m.closer != nil {
+		return m.closer()
 	}
 	return nil
 }

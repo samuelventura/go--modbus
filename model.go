@@ -26,7 +26,7 @@ func (m *MapModel) Execute(ci *Command) (co *Command, err error) {
 	case WriteWos16:
 		m.WriteWos(ci.Slave, ci.Address, ci.Words...)
 	default:
-		err = formatErr("Code unsupported %d", ci.Code)
+		err = formatErr("unsupported code %d", ci.Code)
 		return
 	}
 	return

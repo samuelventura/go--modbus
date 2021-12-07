@@ -1,10 +1,10 @@
 package modbus
 
 type transportExecutor struct {
-	proto Protocol
-	trans Transport
-	close func() error
-	toms  int
+	proto  Protocol
+	trans  Transport
+	closer func() error
+	toms   int
 }
 
 func (e *transportExecutor) Execute(ci *Command) (co *Command, err error) {
@@ -13,8 +13,8 @@ func (e *transportExecutor) Execute(ci *Command) (co *Command, err error) {
 }
 
 func (e *transportExecutor) Close() error {
-	if e.close != nil {
-		return e.close()
+	if e.closer != nil {
+		return e.closer()
 	}
 	return nil
 }

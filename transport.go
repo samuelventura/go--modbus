@@ -5,26 +5,26 @@ import (
 )
 
 type ioTransport struct {
-	close  io.Closer
+	closer io.Closer
 	writer io.Writer
 	reader TimedReader
-	errf   bool
+	eflag  bool
 }
 
 func (t *ioTransport) Close() (err error) {
-	err = t.close.Close()
+	err = t.closer.Close()
 	return
 }
 
 func (t *ioTransport) SetError(errf bool) {
-	t.errf = errf
+	t.eflag = errf
 }
 
 func (t *ioTransport) Discard(qtms int) (err error) {
-	if !t.errf {
+	if !t.eflag {
 		return
 	}
-	t.errf = false
+	t.eflag = false
 	buf := make([]byte, 1)
 	c, err := t.reader.TimedRead(buf, qtms)
 	for c > 0 && err != io.EOF {
@@ -40,7 +40,7 @@ func (t *ioTransport) Discard(qtms int) (err error) {
 
 func (t *ioTransport) TimedRead(buf []byte, toms int, qtms int) (count int, err error) {
 	if qtms <= 0 {
-		err = formatErr("Quiet timeout must be positive %d", qtms)
+		err = formatErr("quiet timeout must be positive %d", qtms)
 		return
 	}
 	toms64 := int64(toms)
@@ -55,7 +55,7 @@ func (t *ioTransport) TimedRead(buf []byte, toms int, qtms int) (count int, err 
 		} else {
 			if count > 0 {
 				if err == nil {
-					err = formatErr("Read inter timeout %d of %d", count, total)
+					err = formatErr("read inter timeout %d of %d", count, total)
 				}
 				return
 			}
@@ -66,7 +66,7 @@ func (t *ioTransport) TimedRead(buf []byte, toms int, qtms int) (count int, err 
 		if count < total && c <= 0 && toms >= 0 {
 			now := unixMillis()
 			if now-start >= toms64 {
-				err = formatErr("Read total timeout %d of %d", count, total)
+				err = formatErr("read total timeout %d of %d", count, total)
 				return
 			}
 		}

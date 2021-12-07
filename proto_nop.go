@@ -34,7 +34,7 @@ func (p *nopProtocol) Scan(t Transport, qtms int) (c *Command, err error) {
 		return
 	}
 	if c1 < 6 {
-		err = formatErr("Partial head %d of %d", c1, 6)
+		err = formatErr("partial head %d of %d", c1, 6)
 		return
 	}
 	code := head[1]
@@ -51,7 +51,7 @@ func (p *nopProtocol) Scan(t Transport, qtms int) (c *Command, err error) {
 			return
 		}
 		if c2 < pending {
-			err = formatErr("Partial scan %d of %d", c1+c2, length)
+			err = formatErr("partial scan %d of %d", c1+c2, length)
 			return
 		}
 		fbuf = bytes.Join([][]byte{head, buf}, nil)

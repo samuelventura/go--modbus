@@ -35,7 +35,7 @@ func (p *rtuProtocol) CheckWrapper(buf []byte, length uint16) error {
 	crc := crc16(buf[0:offset])
 	_crc := encodeWord(buf[offset+1], buf[offset+0])
 	if _crc != crc {
-		return formatErr("Crc mismatch got %04x expected %04x", _crc, crc)
+		return formatErr("crc mismatch got %04x expected %04x", _crc, crc)
 	}
 	return nil
 }
@@ -47,7 +47,7 @@ func (p *rtuProtocol) Scan(t Transport, qtms int) (c *Command, err error) {
 		return
 	}
 	if c1 < 6 {
-		err = formatErr("Partial head %d of %d", c1, 6)
+		err = formatErr("partial head %d of %d", c1, 6)
 		return
 	}
 	code := head[1]
@@ -64,7 +64,7 @@ func (p *rtuProtocol) Scan(t Transport, qtms int) (c *Command, err error) {
 			return
 		}
 		if c2 < pending {
-			err = formatErr("Partial scan %d of %d", c1+c2, length)
+			err = formatErr("partial scan %d of %d", c1+c2, length)
 			return
 		}
 		fbuf = bytes.Join([][]byte{head, buf}, nil)
@@ -74,7 +74,7 @@ func (p *rtuProtocol) Scan(t Transport, qtms int) (c *Command, err error) {
 	buf := fbuf[:length-2]
 	crc := crc16(buf)
 	if _crc != crc {
-		err = formatErr("Crc mismatch got %04x expected %04x", _crc, crc)
+		err = formatErr("crc mismatch got %04x expected %04x", _crc, crc)
 		return
 	}
 	c = &Command{}

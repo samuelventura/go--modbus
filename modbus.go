@@ -52,18 +52,18 @@ func NewConnTransport(conn net.Conn) Transport {
 	return NewIoTransport(NewConnTimedReader(conn), conn)
 }
 
-func NewIoTransport(reader TimedReader, writeclose io.WriteCloser) Transport {
+func NewIoTransport(reader TimedReader, writerCloser io.WriteCloser) Transport {
 	trans := &ioTransport{}
 	trans.reader = reader
-	trans.writer = writeclose
-	trans.close = writeclose
+	trans.writer = writerCloser
+	trans.closer = writerCloser
 	return trans
 }
 
-func NewCloseableMaster(exec Executor, close io.Closer) CloseableMaster {
+func NewCloseableMaster(exec Executor, closer io.Closer) CloseableMaster {
 	master := &closableMaster{}
 	master.exec = exec
-	master.close = func() error { return close.Close() }
+	master.closer = closer.Close
 	return master
 }
 
@@ -72,7 +72,7 @@ func NewTransportExecutor(proto Protocol, trans Transport, toms int) CloseableEx
 	exec.trans = trans
 	exec.proto = proto
 	exec.toms = toms
-	exec.close = func() error { return trans.Close() }
+	exec.closer = trans.Close
 	return exec
 }
 
