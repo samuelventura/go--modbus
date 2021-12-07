@@ -44,9 +44,9 @@ func (p *tcpProtocol) CheckWrapper(buf []byte, length uint16) error {
 	return nil
 }
 
-func (p *tcpProtocol) Scan(t Transport, qtms int) (c *Command, err error) {
+func (p *tcpProtocol) Scan(t Transport) (c *Command, err error) {
 	head := make([]byte, 6)
-	c1, err := t.TimedRead(head, -1, qtms)
+	c1, err := t.TimedRead(head, -1)
 	if err != nil {
 		return
 	}
@@ -68,7 +68,7 @@ func (p *tcpProtocol) Scan(t Transport, qtms int) (c *Command, err error) {
 	//should come in single packet
 	pending := int(_length)
 	buf := make([]byte, pending)
-	c2, err := t.TimedRead(buf, 0, qtms)
+	c2, err := t.TimedRead(buf, 0)
 	if err != nil {
 		return
 	}

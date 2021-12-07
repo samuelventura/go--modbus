@@ -239,11 +239,11 @@ func testWords(t *testing.T, model Model, master Master, s byte, a uint16, value
 
 //SLAVE////////////////////////////
 
-func runSlave(proto Protocol, trans Transport, exec Executor, toms int) {
+func runSlave(proto Protocol, trans Transport, exec Executor) {
 	for {
-		err := oneSlave(proto, trans, exec, toms)
+		err := oneSlave(proto, trans, exec)
 		if err != nil {
-			trace("oneSlave.error", toms, err)
+			trace("oneSlave.error", err)
 		}
 		if err == io.EOF {
 			return
@@ -251,15 +251,15 @@ func runSlave(proto Protocol, trans Transport, exec Executor, toms int) {
 	}
 }
 
-func oneSlave(proto Protocol, trans Transport, exec Executor, toms int) (err error) {
+func oneSlave(proto Protocol, trans Transport, exec Executor) (err error) {
 	//report error to transport
 	//to discard on next interaction
 	defer func() {
 		trans.SetError(err != nil)
 	}()
-	trans.Discard(toms)
+	trans.Discard()
 	for {
-		ci, err := proto.Scan(trans, toms)
+		ci, err := proto.Scan(trans)
 		if err != nil {
 			return err
 		}
@@ -272,7 +272,7 @@ func oneSlave(proto Protocol, trans Transport, exec Executor, toms int) (err err
 			trans.Write(fbuf)
 			continue
 		}
-		_, buf, err := ApplyToExecutor(ci, proto, exec)
+		_, buf, err := applyToExecutor(ci, proto, exec)
 		if err != nil {
 			return err
 		}
@@ -286,13 +286,14 @@ func oneSlave(proto Protocol, trans Transport, exec Executor, toms int) (err err
 	}
 }
 
-func setupMasterSlave(proto Protocol) (model *MapModel, master CloseableMaster, err error) {
+func setupMasterSlave(proto Protocol) (model *mapModel, master CloseableMaster, err error) {
 	listen, err := net.Listen("tcp", ":0")
 	if err != nil {
 		log.Panic(err)
 	}
 	port := listen.Addr().(*net.TCPAddr).Port
 	model = NewMapModel()
+	exec := NewModelExecutor(model)
 	go func() {
 		defer listen.Close()
 		input, err := listen.Accept()
@@ -301,13 +302,31 @@ func setupMasterSlave(proto Protocol) (model *MapModel, master CloseableMaster, 
 			return
 		}
 		itrans := NewConnTransport(input)
-		runSlave(proto, itrans, model, 100)
+		runSlave(proto, itrans, exec)
 	}()
 	otrans, err := NewTcpTransport(fmt.Sprintf(":%d", port), 0)
 	if err != nil {
 		return
 	}
 	master = NewMaster(proto, otrans, 400)
+	return
+}
+
+func applyToExecutor(ci *Command, p Protocol, e Executor) (co *Command, fbuf []byte, err error) {
+	trace("e>", ci)
+	err = ci.CheckValid()
+	if err != nil {
+		return
+	}
+	co, err = e.Execute(ci)
+	if err != nil {
+		return
+	}
+	trace("e<", co)
+	reslen := ci.ResponseLength()
+	fbuf, buf := p.MakeBuffers(reslen)
+	co.EncodeResponse(buf)
+	p.WrapBuffer(fbuf, reslen)
 	return
 }
 

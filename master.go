@@ -1,5 +1,7 @@
 package modbus
 
+// implements: Master, ClosableMaster
+// Builds commands and forwards them to executor
 type closableMaster struct {
 	exec   Executor
 	closer func() error

@@ -17,7 +17,13 @@
 [ ] Verify and narrow public api
 
 Notice
+
 - Responses have not enough info to be fully parsed
 A ReadDis for example wont packet count but only
 the total bytes making it dependant on knowing 
 the original intended count.
+
+
+Fixme
+
+- Simplify SetError/Discard/Finally

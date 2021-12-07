@@ -40,9 +40,9 @@ func (p *rtuProtocol) CheckWrapper(buf []byte, length uint16) error {
 	return nil
 }
 
-func (p *rtuProtocol) Scan(t Transport, qtms int) (c *Command, err error) {
+func (p *rtuProtocol) Scan(t Transport) (c *Command, err error) {
 	head := make([]byte, 6)
-	c1, err := t.TimedRead(head, -1, qtms)
+	c1, err := t.TimedRead(head, -1)
 	if err != nil {
 		return
 	}
@@ -59,7 +59,7 @@ func (p *rtuProtocol) Scan(t Transport, qtms int) (c *Command, err error) {
 	if pending > 0 {
 		c2 := 0
 		buf := make([]byte, pending)
-		c2, err = t.TimedRead(buf, 0, qtms)
+		c2, err = t.TimedRead(buf, 0)
 		if err != nil {
 			return
 		}

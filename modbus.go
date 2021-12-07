@@ -23,7 +23,8 @@ func NewRtuProtocol() Protocol {
 }
 
 func NewMaster(proto Protocol, trans Transport, toms int) CloseableMaster {
-	return NewCloseableMaster(NewTransportExecutor(proto, trans, toms), trans)
+	exec := NewTransportExecutor(proto, trans, toms)
+	return NewCloseableMaster(exec, trans)
 }
 
 func NewRtuMaster(trans Transport, toms int) CloseableMaster {
@@ -49,7 +50,8 @@ func NewConnTimedReader(conn net.Conn) TimedReader {
 }
 
 func NewConnTransport(conn net.Conn) Transport {
-	return NewIoTransport(NewConnTimedReader(conn), conn)
+	reader := NewConnTimedReader(conn)
+	return NewIoTransport(reader, conn)
 }
 
 func NewIoTransport(reader TimedReader, writerCloser io.WriteCloser) Transport {
@@ -72,24 +74,22 @@ func NewTransportExecutor(proto Protocol, trans Transport, toms int) CloseableEx
 	exec.trans = trans
 	exec.proto = proto
 	exec.toms = toms
-	exec.closer = trans.Close
 	return exec
 }
 
-func NewMapModel() *MapModel {
-	m := &MapModel{}
+func NewModelExecutor(model Model) Executor {
+	exec := &modelExecutor{}
+	exec.model = model
+	return exec
+}
+
+func NewMapModel() *mapModel {
+	m := &mapModel{}
 	m.dis = make(map[string]bool)
 	m.dos = make(map[string]bool)
 	m.wis = make(map[string]uint16)
 	m.wos = make(map[string]uint16)
 	return m
-}
-
-type MapModel struct {
-	dis map[string]bool
-	dos map[string]bool
-	wis map[string]uint16
-	wos map[string]uint16
 }
 
 const (
@@ -104,6 +104,7 @@ const (
 	MaxBools        = 255 * 8
 	MaxWords        = 255 / 2
 	TrueWord        = 0xFF00
+	ReadToMs        = 100
 )
 
 type Command struct {
@@ -149,7 +150,7 @@ type Protocol interface {
 	CheckWrapper(buf []byte, length uint16) error
 	MakeBuffers(length uint16) ([]byte, []byte)
 	WrapBuffer(buf []byte, length uint16)
-	Scan(t Transport, qtms int) (*Command, error)
+	Scan(t Transport) (*Command, error)
 	ExceptionLen() int
 	Finally()
 }
@@ -158,16 +159,22 @@ type Transport interface {
 	io.Writer
 	io.Closer
 	//internally applied only after an error was reported
-	Discard(qtms int) error
-	SetError(err bool)
+	//should only report io.EOF errors
+	Discard() error
+	SetError(eflag bool)
 	//expected to return partial read on timeout to detect exception
-	//toms is the first byte timeout, -1 to disable
-	//qtms it the quiet time to return partial read regardless of toms
-	TimedRead(buf []byte, toms int, qtms int) (int, error)
+	//expected to never return a negative counter
+	//toms<0 returns only on full buffer or io.EOF
+	//toms=0 returns data readily available
+	//toms>0 reads as much as possible until expiration
+	//must detect breaks at middle of packet
+	TimedRead(buf []byte, toms int) (int, error)
 }
 
 type TimedReader interface {
-	TimedRead(buf []byte, toms int) (int, error)
+	//expected to never return a negative counter
+	//must timeout at ReadToMs constant value
+	TimedRead(buf []byte) (int, error)
 }
 
 type CloseableMaster interface {

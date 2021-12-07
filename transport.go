@@ -16,20 +16,19 @@ func (t *ioTransport) Close() (err error) {
 	return
 }
 
-func (t *ioTransport) SetError(errf bool) {
-	t.eflag = errf
+func (t *ioTransport) SetError(eflag bool) {
+	t.eflag = eflag
 }
 
-func (t *ioTransport) Discard(qtms int) (err error) {
+func (t *ioTransport) Discard() (err error) {
 	if !t.eflag {
 		return
 	}
 	t.eflag = false
-	buf := make([]byte, 1)
-	c, err := t.reader.TimedRead(buf, qtms)
+	buf := make([]byte, 256)
+	c, err := t.reader.TimedRead(buf)
 	for c > 0 && err != io.EOF {
-		c = 0
-		c, err = t.reader.TimedRead(buf, qtms)
+		c, err = t.reader.TimedRead(buf)
 	}
 	//only report EOF
 	if err != io.EOF {
@@ -38,23 +37,19 @@ func (t *ioTransport) Discard(qtms int) (err error) {
 	return
 }
 
-func (t *ioTransport) TimedRead(buf []byte, toms int, qtms int) (count int, err error) {
-	if qtms <= 0 {
-		err = formatErr("quiet timeout must be positive %d", qtms)
-		return
-	}
+func (t *ioTransport) TimedRead(buf []byte, toms int) (count int, err error) {
 	toms64 := int64(toms)
 	start := unixMillis()
 	total := len(buf)
-	count = 0
+	readc := 0
 	for count < total {
-		c := 0
-		c, err = t.reader.TimedRead(buf[count:], qtms)
-		if c > 0 {
-			count += c
+		readc, err = t.reader.TimedRead(buf[count:])
+		if readc > 0 {
+			count += readc
 		} else {
 			if count > 0 {
 				if err == nil {
+					//break at middle of packet detected
 					err = formatErr("read inter timeout %d of %d", count, total)
 				}
 				return
@@ -63,7 +58,8 @@ func (t *ioTransport) TimedRead(buf []byte, toms int, qtms int) (count int, err 
 		if err == io.EOF {
 			return
 		}
-		if count < total && c <= 0 && toms >= 0 {
+		//keep reading, ignore timeout if readc > 0
+		if count < total && toms >= 0 && readc <= 0 {
 			now := unixMillis()
 			if now-start >= toms64 {
 				err = formatErr("read total timeout %d of %d", count, total)
