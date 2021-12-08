@@ -12,17 +12,64 @@ import (
 	"github.com/samuelventura/go-modbus"
 )
 
-func ProtocolTest(t *testing.T, proto modbus.Protocol, setup func(t *testing.T, proto modbus.Protocol) (model modbus.Model, master modbus.CloseableMaster, err error)) {
-	log.Println("protocol", reflect.TypeOf(proto))
-	model, master, err := setup(t, proto)
+func ProtocolTest(s *SetupProtoTest) {
+	log.Println("protocol", reflect.TypeOf(s.Proto))
+	ModelMasterTest(s.T, s.Model, s.Master)
+}
+
+//SLAVE////////////////////////////
+
+type ExceptionExecutor struct {
+	Exec modbus.Executor
+}
+
+func (e *ExceptionExecutor) Execute(ci *modbus.Command) (co *modbus.Command, err error) {
+	if ci.Slave == 0xFF && ci.Address == 0xFFFF {
+		err = formatErr("Exception")
+		return
+	}
+	return e.Exec.Execute(ci)
+}
+
+type SetupProtoTest struct {
+	Master modbus.CloseableMaster
+	Proto  modbus.Protocol
+	Model  modbus.Model
+	T      *testing.T
+}
+
+func setupMasterSlave(t *testing.T, proto modbus.Protocol, cb func(s *SetupProtoTest)) {
+	listen, err := net.Listen("tcp", ":0")
 	fatalIfError(t, err)
-	testModelMaster(t, model, master)
+	defer listen.Close()
+	setup := &SetupProtoTest{}
+	setup.T = t
+	setup.Proto = proto
+	port := listen.Addr().(*net.TCPAddr).Port
+	setup.Model = modbus.NewMapModel()
+	exec := modbus.NewModelExecutor(setup.Model)
+	execw := &ExceptionExecutor{exec}
+	go func() {
+		defer listen.Close()
+		input, err := listen.Accept()
+		if err != nil {
+			return
+		}
+		itrans := modbus.NewConnTransport(input)
+		modbus.RunSlave(proto, itrans, execw)
+	}()
+	otrans, err := modbus.NewTcpTransport(fmt.Sprintf(":%d", port), 0)
+	if err != nil {
+		return
+	}
+	setup.Master = modbus.NewMaster(proto, otrans, 400)
+	defer setup.Master.Close()
+	cb(setup)
 }
 
 //MASTER////////////////////////////
 
-func testModelMaster(t *testing.T, model modbus.Model, master modbus.CloseableMaster) {
-	defer master.Close()
+func ModelMasterTest(t *testing.T, model modbus.Model, master modbus.Master) {
 	var bools []bool
 	var words []uint16
 	var bool1 bool
@@ -228,45 +275,6 @@ func testWords(t *testing.T, model modbus.Model, master modbus.Master, s byte, a
 	assertWordsEqualErr(t, err, values, words)
 	master.WriteWos(s, a, values...)
 	assertWordsEqual(t, values, model.ReadWos(s, a, uint16(len(values))))
-}
-
-//SLAVE////////////////////////////
-
-type ExceptionExecutor struct {
-	Exec modbus.Executor
-}
-
-func (e *ExceptionExecutor) Execute(ci *modbus.Command) (co *modbus.Command, err error) {
-	if ci.Slave == 0xFF && ci.Address == 0xFFFF {
-		err = formatErr("Exception")
-		return
-	}
-	return e.Exec.Execute(ci)
-}
-
-func setupMasterSlave(t *testing.T, proto modbus.Protocol) (model modbus.Model, master modbus.CloseableMaster, err error) {
-	listen, err := net.Listen("tcp", ":0")
-	fatalIfError(t, err)
-	port := listen.Addr().(*net.TCPAddr).Port
-	model = modbus.NewMapModel()
-	exec := modbus.NewModelExecutor(model)
-	execw := &ExceptionExecutor{exec}
-	go func() {
-		defer listen.Close()
-		input, err := listen.Accept()
-		if err != nil {
-			log.Println("accept failed", err)
-			return
-		}
-		itrans := modbus.NewConnTransport(input)
-		modbus.RunSlave(proto, itrans, execw)
-	}()
-	otrans, err := modbus.NewTcpTransport(fmt.Sprintf(":%d", port), 0)
-	if err != nil {
-		return
-	}
-	master = modbus.NewMaster(proto, otrans, 400)
-	return
 }
 
 //ASSERT////////////////////////////
