@@ -233,7 +233,7 @@ func testWords(t *testing.T, model modbus.Model, master modbus.Master, s byte, a
 //SLAVE////////////////////////////
 
 type ExceptionExecutor struct {
-	exec modbus.Executor
+	Exec modbus.Executor
 }
 
 func (e *ExceptionExecutor) Execute(ci *modbus.Command) (co *modbus.Command, err error) {
@@ -241,7 +241,7 @@ func (e *ExceptionExecutor) Execute(ci *modbus.Command) (co *modbus.Command, err
 		err = formatErr("Exception")
 		return
 	}
-	return e.exec.Execute(ci)
+	return e.Exec.Execute(ci)
 }
 
 func setupMasterSlave(proto modbus.Protocol) (model modbus.Model, master modbus.CloseableMaster, err error) {
