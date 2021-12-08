@@ -158,9 +158,10 @@ type Protocol interface {
 type Transport interface {
 	io.Writer
 	io.Closer
-	//internally applied only after an error was reported
+	//internally applied only if scheduled
 	//should only report io.EOF errors
 	DiscardIf() error
+	//schedules a discard on next command
 	DiscardOn()
 	//expected to return partial read on timeout to detect exception
 	//expected to never return a negative counter
