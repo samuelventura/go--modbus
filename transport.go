@@ -5,10 +5,10 @@ import (
 )
 
 type ioTransport struct {
-	closer io.Closer
-	writer io.Writer
-	reader TimedReader
-	eflag  bool
+	closer  io.Closer
+	writer  io.Writer
+	reader  TimedReader
+	discard bool
 }
 
 func (t *ioTransport) Close() (err error) {
@@ -16,15 +16,15 @@ func (t *ioTransport) Close() (err error) {
 	return
 }
 
-func (t *ioTransport) SetError(eflag bool) {
-	t.eflag = eflag
+func (t *ioTransport) DiscardOn() {
+	t.discard = true
 }
 
 func (t *ioTransport) Discard() (err error) {
-	if !t.eflag {
+	if !t.discard {
 		return
 	}
-	t.eflag = false
+	t.discard = false
 	buf := make([]byte, 256)
 	c, err := t.reader.TimedRead(buf)
 	for c > 0 && err != io.EOF {

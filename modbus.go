@@ -161,7 +161,7 @@ type Transport interface {
 	//internally applied only after an error was reported
 	//should only report io.EOF errors
 	Discard() error
-	SetError(eflag bool)
+	DiscardOn()
 	//expected to return partial read on timeout to detect exception
 	//expected to never return a negative counter
 	//toms<0 returns only on full buffer or io.EOF

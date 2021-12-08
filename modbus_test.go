@@ -255,7 +255,9 @@ func oneSlave(proto Protocol, trans Transport, exec Executor) (err error) {
 	//report error to transport
 	//to discard on next interaction
 	defer func() {
-		trans.SetError(err != nil)
+		if err != nil {
+			trans.DiscardOn()
+		}
 	}()
 	trans.Discard()
 	for {

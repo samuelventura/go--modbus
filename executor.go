@@ -66,7 +66,9 @@ func (e *transportExecutor) Execute(ci *Command) (co *Command, err error) {
 	//report error to transport
 	//to discard on next interaction
 	defer func() {
-		e.trans.SetError(err != nil)
+		if err != nil {
+			e.trans.DiscardOn()
+		}
 	}()
 	err = e.trans.Discard()
 	if err != nil {
