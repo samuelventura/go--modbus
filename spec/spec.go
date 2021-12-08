@@ -12,9 +12,9 @@ import (
 	"github.com/samuelventura/go-modbus"
 )
 
-func ProtocolTest(t *testing.T, proto modbus.Protocol, setup func(proto modbus.Protocol) (model modbus.Model, master modbus.CloseableMaster, err error)) {
+func ProtocolTest(t *testing.T, proto modbus.Protocol, setup func(t *testing.T, proto modbus.Protocol) (model modbus.Model, master modbus.CloseableMaster, err error)) {
 	log.Println("protocol", reflect.TypeOf(proto))
-	model, master, err := setup(proto)
+	model, master, err := setup(t, proto)
 	fatalIfError(t, err)
 	testModelMaster(t, model, master)
 }
@@ -244,11 +244,9 @@ func (e *ExceptionExecutor) Execute(ci *modbus.Command) (co *modbus.Command, err
 	return e.Exec.Execute(ci)
 }
 
-func setupMasterSlave(proto modbus.Protocol) (model modbus.Model, master modbus.CloseableMaster, err error) {
+func setupMasterSlave(t *testing.T, proto modbus.Protocol) (model modbus.Model, master modbus.CloseableMaster, err error) {
 	listen, err := net.Listen("tcp", ":0")
-	if err != nil {
-		log.Panic(err)
-	}
+	fatalIfError(t, err)
 	port := listen.Addr().(*net.TCPAddr).Port
 	model = modbus.NewMapModel()
 	exec := modbus.NewModelExecutor(model)
