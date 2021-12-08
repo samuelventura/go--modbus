@@ -2,7 +2,6 @@ package modbus
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"reflect"
@@ -15,7 +14,6 @@ import (
 func TestModbus(t *testing.T) {
 	defer logPanic()
 	log.SetFlags(log.Lmicroseconds)
-	//traceEnabled = true
 	//EnableTrace(true)
 	testProtocol(t, NewNopProtocol())
 	testProtocol(t, NewRtuProtocol())
@@ -239,53 +237,16 @@ func testWords(t *testing.T, model Model, master Master, s byte, a uint16, value
 
 //SLAVE////////////////////////////
 
-func runSlave(proto Protocol, trans Transport, exec Executor) {
-	for {
-		err := oneSlave(proto, trans, exec)
-		if err != nil {
-			trace("oneSlave.error", err)
-		}
-		if err == io.EOF {
-			return
-		}
-	}
+type exceptionExecutor struct {
+	exec Executor
 }
 
-func oneSlave(proto Protocol, trans Transport, exec Executor) (err error) {
-	//report error to transport
-	//to discard on next interaction
-	defer func() {
-		if err != nil {
-			trans.DiscardOn()
-		}
-	}()
-	trans.DiscardIf()
-	for {
-		ci, err := proto.Scan(trans)
-		if err != nil {
-			return err
-		}
-		if ci.Slave == 0xFF && ci.Address == 0xFFFF {
-			fbuf, buf := proto.MakeBuffers(3)
-			buf[0] = ci.Slave
-			buf[1] = ci.Code | 0x80
-			buf[2] = ^ci.Code
-			proto.WrapBuffer(fbuf, 3)
-			trans.Write(fbuf)
-			continue
-		}
-		_, buf, err := applyToExecutor(ci, proto, exec)
-		if err != nil {
-			return err
-		}
-		c, err := trans.Write(buf)
-		if err != nil {
-			return err
-		}
-		if c != len(buf) {
-			return formatErr("partial write %d of %d", c, len(buf))
-		}
+func (e *exceptionExecutor) Execute(ci *Command) (co *Command, err error) {
+	if ci.Slave == 0xFF && ci.Address == 0xFFFF {
+		err = formatErr("Exception")
+		return
 	}
+	return e.exec.Execute(ci)
 }
 
 func setupMasterSlave(proto Protocol) (model *mapModel, master CloseableMaster, err error) {
@@ -296,6 +257,7 @@ func setupMasterSlave(proto Protocol) (model *mapModel, master CloseableMaster, 
 	port := listen.Addr().(*net.TCPAddr).Port
 	model = NewMapModel()
 	exec := NewModelExecutor(model)
+	execw := &exceptionExecutor{exec}
 	go func() {
 		defer listen.Close()
 		input, err := listen.Accept()
@@ -304,31 +266,13 @@ func setupMasterSlave(proto Protocol) (model *mapModel, master CloseableMaster, 
 			return
 		}
 		itrans := NewConnTransport(input)
-		runSlave(proto, itrans, exec)
+		RunSlave(proto, itrans, execw)
 	}()
 	otrans, err := NewTcpTransport(fmt.Sprintf(":%d", port), 0)
 	if err != nil {
 		return
 	}
 	master = NewMaster(proto, otrans, 400)
-	return
-}
-
-func applyToExecutor(ci *Command, p Protocol, e Executor) (co *Command, fbuf []byte, err error) {
-	trace("e>", ci)
-	err = ci.CheckValid()
-	if err != nil {
-		return
-	}
-	co, err = e.Execute(ci)
-	if err != nil {
-		return
-	}
-	trace("e<", co)
-	reslen := ci.ResponseLength()
-	fbuf, buf := p.MakeBuffers(reslen)
-	co.EncodeResponse(buf)
-	p.WrapBuffer(fbuf, reslen)
 	return
 }
 
