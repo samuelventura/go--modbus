@@ -63,7 +63,7 @@ func (e *transportExecutor) Close() error {
 }
 
 func (e *transportExecutor) Execute(ci *Command) (co *Command, err error) {
-	trace("t>", ci)
+	Trace("t>", ci)
 	err = ci.CheckValid()
 	if err != nil {
 		return
@@ -73,7 +73,7 @@ func (e *transportExecutor) Execute(ci *Command) (co *Command, err error) {
 	freq, req := e.proto.MakeBuffers(reqlen)
 	ci.EncodeRequest(req)
 	e.proto.WrapBuffer(freq, reqlen)
-	trace("t>", freq)
+	Trace("t>", freq)
 	//report error to transport
 	//to discard on next interaction
 	defer func() {
@@ -97,7 +97,7 @@ func (e *transportExecutor) Execute(ci *Command) (co *Command, err error) {
 	reslen := ci.ResponseLength()
 	fres, res := e.proto.MakeBuffers(reslen)
 	_read, err := e.trans.TimedRead(fres, e.toms)
-	trace("t<", fres[:_read])
+	Trace("t<", fres[:_read])
 	if _read == e.proto.ExceptionLen() { //6+3
 		err = e.proto.CheckWrapper(fres, 3)
 		if err != nil {
@@ -129,6 +129,6 @@ func (e *transportExecutor) Execute(ci *Command) (co *Command, err error) {
 	co = &Command{}
 	//not enough info in response packet to parse reads
 	co.DecodeResponse(res, ci.Corv)
-	trace("t<", co)
+	Trace("t<", co)
 	return
 }

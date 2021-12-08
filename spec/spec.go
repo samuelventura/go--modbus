@@ -1,4 +1,4 @@
-package modbus
+package spec
 
 import (
 	"fmt"
@@ -8,17 +8,11 @@ import (
 	"runtime/debug"
 	"testing"
 	"time"
+
+	"github.com/samuelventura/go-modbus"
 )
 
-func TestModbus(t *testing.T) {
-	defer logPanic()
-	log.SetFlags(log.Lmicroseconds)
-	ProtocolTest(t, NewNopProtocol(), setupMasterSlave)
-	ProtocolTest(t, NewRtuProtocol(), setupMasterSlave)
-	ProtocolTest(t, NewTcpProtocol(), setupMasterSlave)
-}
-
-func ProtocolTest(t *testing.T, proto Protocol, setup func(proto Protocol) (model *mapModel, master CloseableMaster, err error)) {
+func ProtocolTest(t *testing.T, proto modbus.Protocol, setup func(proto modbus.Protocol) (model modbus.Model, master modbus.CloseableMaster, err error)) {
 	log.Println("protocol", reflect.TypeOf(proto))
 	model, master, err := setup(proto)
 	fatalIfError(t, err)
@@ -27,7 +21,7 @@ func ProtocolTest(t *testing.T, proto Protocol, setup func(proto Protocol) (mode
 
 //MASTER////////////////////////////
 
-func testModelMaster(t *testing.T, model Model, master CloseableMaster) {
+func testModelMaster(t *testing.T, model modbus.Model, master modbus.CloseableMaster) {
 	defer master.Close()
 	var bools []bool
 	var words []uint16
@@ -35,27 +29,27 @@ func testModelMaster(t *testing.T, model Model, master CloseableMaster) {
 	var word1 uint16
 	var err error
 
-	testWriteDos(t, model, master, 0, 0, randBools(MaxBools)...)
-	testWriteWos(t, model, master, 0, 0, randWords(MaxWords)...)
-	testReadDos(t, model, master, 0, 0, randBools(MaxBools)...)
-	testReadWos(t, model, master, 0, 0, randWords(MaxWords)...)
-	testReadDis(t, model, master, 0, 0, randBools(MaxBools)...)
-	testReadWis(t, model, master, 0, 0, randWords(MaxWords)...)
+	testWriteDos(t, model, master, 0, 0, randBools(modbus.MaxBools)...)
+	testWriteWos(t, model, master, 0, 0, randWords(modbus.MaxWords)...)
+	testReadDos(t, model, master, 0, 0, randBools(modbus.MaxBools)...)
+	testReadWos(t, model, master, 0, 0, randWords(modbus.MaxWords)...)
+	testReadDis(t, model, master, 0, 0, randBools(modbus.MaxBools)...)
+	testReadWis(t, model, master, 0, 0, randWords(modbus.MaxWords)...)
 
 	for k := 0; k < 10; k++ {
-		testWriteDos(t, model, master, 0, 0, randBools(MaxBools-k)...)
-		testWriteWos(t, model, master, 0, 0, randWords(MaxWords-k)...)
-		testReadDos(t, model, master, 0, 0, randBools(MaxBools-k)...)
-		testReadWos(t, model, master, 0, 0, randWords(MaxWords-k)...)
-		testReadDis(t, model, master, 0, 0, randBools(MaxBools-k)...)
-		testReadWis(t, model, master, 0, 0, randWords(MaxWords-k)...)
+		testWriteDos(t, model, master, 0, 0, randBools(modbus.MaxBools-k)...)
+		testWriteWos(t, model, master, 0, 0, randWords(modbus.MaxWords-k)...)
+		testReadDos(t, model, master, 0, 0, randBools(modbus.MaxBools-k)...)
+		testReadWos(t, model, master, 0, 0, randWords(modbus.MaxWords-k)...)
+		testReadDis(t, model, master, 0, 0, randBools(modbus.MaxBools-k)...)
+		testReadWis(t, model, master, 0, 0, randWords(modbus.MaxWords-k)...)
 	}
 
 	err = master.WriteDo(0xFF, 0xFFFF, false)
-	if err.Error() != fmt.Sprintf("modbus exception %02x", ^WriteDo05) {
+	if err.Error() != fmt.Sprintf("modbus exception %02x", ^modbus.WriteDo05) {
 		t.Fatalf("exception expected: %s", err.Error())
 	}
-	if me, ok := err.(*ModbusException); !ok || me.Code != ^WriteDo05 {
+	if me, ok := err.(*modbus.ModbusException); !ok || me.Code != ^modbus.WriteDo05 {
 		t.Fatalf("exception expected: %s", err.Error())
 	}
 	max := 0x10001
@@ -174,43 +168,43 @@ func testModelMaster(t *testing.T, model Model, master CloseableMaster) {
 	}
 }
 
-func testWriteDos(t *testing.T, model Model, master Master, s byte, a uint16, values ...bool) {
+func testWriteDos(t *testing.T, model modbus.Model, master modbus.Master, s byte, a uint16, values ...bool) {
 	fatalIfError(t, master.WriteDos(s, a, values...))
 	bools := model.ReadDos(s, a, uint16(len(values)))
 	assertBoolsEqual(t, values, bools)
 }
 
-func testWriteWos(t *testing.T, model Model, master Master, s byte, a uint16, values ...uint16) {
+func testWriteWos(t *testing.T, model modbus.Model, master modbus.Master, s byte, a uint16, values ...uint16) {
 	fatalIfError(t, master.WriteWos(s, a, values...))
 	words := model.ReadWos(s, a, uint16(len(values)))
 	assertWordsEqual(t, values, words)
 }
 
-func testReadDos(t *testing.T, model Model, master Master, s byte, a uint16, values ...bool) {
+func testReadDos(t *testing.T, model modbus.Model, master modbus.Master, s byte, a uint16, values ...bool) {
 	model.WriteDos(s, a, values...)
 	bools, err := master.ReadDos(s, a, uint16(len(values)))
 	assertBoolsEqualErr(t, err, values, bools)
 }
 
-func testReadWos(t *testing.T, model Model, master Master, s byte, a uint16, values ...uint16) {
+func testReadWos(t *testing.T, model modbus.Model, master modbus.Master, s byte, a uint16, values ...uint16) {
 	model.WriteWos(s, a, values...)
 	words, err := master.ReadWos(s, a, uint16(len(values)))
 	assertWordsEqualErr(t, err, values, words)
 }
 
-func testReadDis(t *testing.T, model Model, master Master, s byte, a uint16, values ...bool) {
+func testReadDis(t *testing.T, model modbus.Model, master modbus.Master, s byte, a uint16, values ...bool) {
 	model.WriteDis(s, a, values...)
 	bools, err := master.ReadDis(s, a, uint16(len(values)))
 	assertBoolsEqualErr(t, err, values, bools)
 }
 
-func testReadWis(t *testing.T, model Model, master Master, s byte, a uint16, values ...uint16) {
+func testReadWis(t *testing.T, model modbus.Model, master modbus.Master, s byte, a uint16, values ...uint16) {
 	model.WriteWis(s, a, values...)
 	words, err := master.ReadWis(s, a, uint16(len(values)))
 	assertWordsEqualErr(t, err, values, words)
 }
 
-func testBools(t *testing.T, model Model, master Master, s byte, a uint16, values ...bool) {
+func testBools(t *testing.T, model modbus.Model, master modbus.Master, s byte, a uint16, values ...bool) {
 	var err error
 	var bools []bool
 	model.WriteDis(s, a, values...)
@@ -223,7 +217,7 @@ func testBools(t *testing.T, model Model, master Master, s byte, a uint16, value
 	assertBoolsEqual(t, values, model.ReadDos(s, a, uint16(len(values))))
 }
 
-func testWords(t *testing.T, model Model, master Master, s byte, a uint16, values ...uint16) {
+func testWords(t *testing.T, model modbus.Model, master modbus.Master, s byte, a uint16, values ...uint16) {
 	var err error
 	var words []uint16
 	model.WriteWis(s, a, values...)
@@ -239,10 +233,10 @@ func testWords(t *testing.T, model Model, master Master, s byte, a uint16, value
 //SLAVE////////////////////////////
 
 type exceptionExecutor struct {
-	exec Executor
+	exec modbus.Executor
 }
 
-func (e *exceptionExecutor) Execute(ci *Command) (co *Command, err error) {
+func (e *exceptionExecutor) Execute(ci *modbus.Command) (co *modbus.Command, err error) {
 	if ci.Slave == 0xFF && ci.Address == 0xFFFF {
 		err = formatErr("Exception")
 		return
@@ -250,30 +244,30 @@ func (e *exceptionExecutor) Execute(ci *Command) (co *Command, err error) {
 	return e.exec.Execute(ci)
 }
 
-func setupMasterSlave(proto Protocol) (model *mapModel, master CloseableMaster, err error) {
+func setupMasterSlave(proto modbus.Protocol) (model modbus.Model, master modbus.CloseableMaster, err error) {
 	listen, err := net.Listen("tcp", ":0")
 	if err != nil {
 		log.Panic(err)
 	}
 	port := listen.Addr().(*net.TCPAddr).Port
-	model = NewMapModel()
-	exec := NewModelExecutor(model)
+	model = modbus.NewMapModel()
+	exec := modbus.NewModelExecutor(model)
 	execw := &exceptionExecutor{exec}
 	go func() {
 		defer listen.Close()
 		input, err := listen.Accept()
 		if err != nil {
-			trace("accept failed", err)
+			log.Println("accept failed", err)
 			return
 		}
-		itrans := NewConnTransport(input)
-		RunSlave(proto, itrans, execw)
+		itrans := modbus.NewConnTransport(input)
+		modbus.RunSlave(proto, itrans, execw)
 	}()
-	otrans, err := NewTcpTransport(fmt.Sprintf(":%d", port), 0)
+	otrans, err := modbus.NewTcpTransport(fmt.Sprintf(":%d", port), 0)
 	if err != nil {
 		return
 	}
-	master = NewMaster(proto, otrans, 400)
+	master = modbus.NewMaster(proto, otrans, 400)
 	return
 }
 
@@ -371,4 +365,9 @@ func fatalIfError(t *testing.T, err error) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+func formatErr(format string, args ...interface{}) error {
+	msg := fmt.Sprintf(format, args...)
+	return fmt.Errorf("%s %s", msg, string(debug.Stack()))
 }

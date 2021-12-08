@@ -13,12 +13,21 @@
 - [x] Disable trace in production
 - [x] Slave: Bootstrap only
 - [x] Environ controlled trace
+- [x] Public importable spec
 - [ ] Out of bounds checks
 - [ ] Special function codes
 - [ ] Special data types
 - [ ] Verify and narrow public api
 - [ ] Test: IO error recoveries
 - [ ] Test: In the middle breaks
+
+## Helpers
+
+```bash
+(cd spec; go test)
+(cd spec; GO_MODBUS_TRACE=true go test)
+(cd sample; go run .)
+```
 
 ## Notes
 

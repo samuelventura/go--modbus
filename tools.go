@@ -16,7 +16,7 @@ func init() {
 	}
 }
 
-func trace(args ...interface{}) {
+func Trace(args ...interface{}) {
 	if traceEnabled {
 		log.Println(args...)
 	}

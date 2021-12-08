@@ -1,7 +1,7 @@
 package modbus
 
 func ApplyToExecutor(ci *Command, p Protocol, e Executor) (co *Command, fbuf []byte, err error) {
-	trace("e>", ci)
+	Trace("e>", ci)
 	err = ci.CheckValid()
 	if err != nil {
 		return
@@ -10,7 +10,7 @@ func ApplyToExecutor(ci *Command, p Protocol, e Executor) (co *Command, fbuf []b
 	if err != nil {
 		return
 	}
-	trace("e<", co)
+	Trace("e<", co)
 	reslen := ci.ResponseLength()
 	fbuf, buf := p.MakeBuffers(reslen)
 	co.EncodeResponse(buf)
