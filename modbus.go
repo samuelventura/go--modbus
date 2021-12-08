@@ -160,7 +160,7 @@ type Transport interface {
 	io.Closer
 	//internally applied only after an error was reported
 	//should only report io.EOF errors
-	Discard() error
+	DiscardIf() error
 	DiscardOn()
 	//expected to return partial read on timeout to detect exception
 	//expected to never return a negative counter

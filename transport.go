@@ -20,7 +20,7 @@ func (t *ioTransport) DiscardOn() {
 	t.discard = true
 }
 
-func (t *ioTransport) Discard() (err error) {
+func (t *ioTransport) DiscardIf() (err error) {
 	if !t.discard {
 		return
 	}

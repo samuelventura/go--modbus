@@ -259,7 +259,7 @@ func oneSlave(proto Protocol, trans Transport, exec Executor) (err error) {
 			trans.DiscardOn()
 		}
 	}()
-	trans.Discard()
+	trans.DiscardIf()
 	for {
 		ci, err := proto.Scan(trans)
 		if err != nil {

@@ -70,7 +70,7 @@ func (e *transportExecutor) Execute(ci *Command) (co *Command, err error) {
 			e.trans.DiscardOn()
 		}
 	}()
-	err = e.trans.Discard()
+	err = e.trans.DiscardIf()
 	if err != nil {
 		return
 	}
