@@ -1,6 +1,9 @@
 package modbus
 
-import "io"
+import (
+	"fmt"
+	"io"
+)
 
 // Implementes: Executor
 // Aplies commands to a model
@@ -36,6 +39,14 @@ func (e *modelExecutor) Execute(ci *Command) (co *Command, err error) {
 		return
 	}
 	return
+}
+
+type ModbusException struct {
+	Code byte
+}
+
+func (m *ModbusException) Error() string {
+	return fmt.Sprintf("modbus exception %02x", m.Code)
 }
 
 // Implementes: Executor, ClosableExecutor
@@ -96,7 +107,7 @@ func (e *transportExecutor) Execute(ci *Command) (co *Command, err error) {
 		if err != nil {
 			return
 		}
-		err = formatErr("modbusException %02x", res[2])
+		err = &ModbusException{res[2]}
 		return
 	}
 	if err != nil {

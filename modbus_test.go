@@ -6,7 +6,6 @@ import (
 	"net"
 	"reflect"
 	"runtime/debug"
-	"strings"
 	"testing"
 	"time"
 )
@@ -14,16 +13,15 @@ import (
 func TestModbus(t *testing.T) {
 	defer logPanic()
 	log.SetFlags(log.Lmicroseconds)
-	//EnableTrace(true)
-	testProtocol(t, NewNopProtocol())
-	testProtocol(t, NewRtuProtocol())
-	testProtocol(t, NewTcpProtocol())
+	ProtocolTest(t, NewNopProtocol(), setupMasterSlave)
+	ProtocolTest(t, NewRtuProtocol(), setupMasterSlave)
+	ProtocolTest(t, NewTcpProtocol(), setupMasterSlave)
 }
 
-func testProtocol(t *testing.T, proto Protocol) {
+func ProtocolTest(t *testing.T, proto Protocol, setup func(proto Protocol) (model *mapModel, master CloseableMaster, err error)) {
 	log.Println("protocol", reflect.TypeOf(proto))
-	model, master, err := setupMasterSlave(proto)
-	ifErrFatal(t, err)
+	model, master, err := setup(proto)
+	fatalIfError(t, err)
 	testModelMaster(t, model, master)
 }
 
@@ -54,13 +52,16 @@ func testModelMaster(t *testing.T, model Model, master CloseableMaster) {
 	}
 
 	err = master.WriteDo(0xFF, 0xFFFF, false)
-	if !strings.HasPrefix(err.Error(), fmt.Sprintf("modbusException %02x", ^WriteDo05)) {
+	if err.Error() != fmt.Sprintf("modbus exception %02x", ^WriteDo05) {
+		t.Fatalf("exception expected: %s", err.Error())
+	}
+	if me, ok := err.(*ModbusException); !ok || me.Code != ^WriteDo05 {
 		t.Fatalf("exception expected: %s", err.Error())
 	}
 	max := 0x10001
 	start := time.Now().UnixNano()
 	for k := 0; k < max; k++ {
-		ifErrFatal(t, master.WriteDo(0, 0, false))
+		fatalIfError(t, master.WriteDo(0, 0, false))
 	}
 	end := time.Now().UnixNano()
 	totals := float64(end-start) / 1000000000.0
@@ -71,26 +72,26 @@ func testModelMaster(t *testing.T, model Model, master CloseableMaster) {
 			s := byte(ss)
 			a := uint16(aa)
 
-			ifErrFatal(t, master.WriteDo(s, a, true))
+			fatalIfError(t, master.WriteDo(s, a, true))
 			assertBoolsEqual(t, model.ReadDos(s, a, 1), []bool{true})
 			bools, err = master.ReadDos(s, a, 1)
 			assertBoolsEqualErr(t, err, bools, []bool{true})
 			bool1, err = master.ReadDo(s, a)
 			assertBoolEqualErr(t, err, bool1, true)
-			ifErrFatal(t, master.WriteDo(s, a, false))
+			fatalIfError(t, master.WriteDo(s, a, false))
 			assertBoolsEqual(t, model.ReadDos(s, a, 1), []bool{false})
 			bools, err = master.ReadDos(s, a, 1)
 			assertBoolsEqualErr(t, err, bools, []bool{false})
 			bool1, err = master.ReadDo(s, a)
 			assertBoolEqualErr(t, err, bool1, false)
 
-			ifErrFatal(t, master.WriteWo(s, a, 0x37A5))
+			fatalIfError(t, master.WriteWo(s, a, 0x37A5))
 			assertWordsEqual(t, model.ReadWos(s, a, 1), []uint16{0x37A5})
 			words, err = master.ReadWos(s, a, 1)
 			assertWordsEqualErr(t, err, words, []uint16{0x37A5})
 			word1, err = master.ReadWo(s, a)
 			assertWordEqualErr(t, err, word1, 0x37A5)
-			ifErrFatal(t, master.WriteWo(s, a, 0xC8F0))
+			fatalIfError(t, master.WriteWo(s, a, 0xC8F0))
 			assertWordsEqual(t, model.ReadWos(s, a, 1), []uint16{0xC8F0})
 			words, err = master.ReadWos(s, a, 1)
 			assertWordsEqualErr(t, err, words, []uint16{0xC8F0})
@@ -98,18 +99,18 @@ func testModelMaster(t *testing.T, model Model, master CloseableMaster) {
 			assertWordEqualErr(t, err, word1, 0xC8F0)
 
 			a += 1
-			ifErrFatal(t, master.WriteDos(s, a, true, true))
+			fatalIfError(t, master.WriteDos(s, a, true, true))
 			assertBoolsEqual(t, model.ReadDos(s, a, 2), []bool{true, true})
-			ifErrFatal(t, master.WriteDos(s, a, false, true))
+			fatalIfError(t, master.WriteDos(s, a, false, true))
 			assertBoolsEqual(t, model.ReadDos(s, a, 2), []bool{false, true})
-			ifErrFatal(t, master.WriteDos(s, a, true, false))
+			fatalIfError(t, master.WriteDos(s, a, true, false))
 			assertBoolsEqual(t, model.ReadDos(s, a, 2), []bool{true, false})
-			ifErrFatal(t, master.WriteDos(s, a, false, false))
+			fatalIfError(t, master.WriteDos(s, a, false, false))
 			assertBoolsEqual(t, model.ReadDos(s, a, 2), []bool{false, false})
 
-			ifErrFatal(t, master.WriteWos(s, a, 0x37A5, 0xC8F0))
+			fatalIfError(t, master.WriteWos(s, a, 0x37A5, 0xC8F0))
 			assertWordsEqual(t, model.ReadWos(s, a, 2), []uint16{0x37A5, 0xC8F0})
-			ifErrFatal(t, master.WriteWos(s, a, 0xC80F, 0x37A5))
+			fatalIfError(t, master.WriteWos(s, a, 0xC80F, 0x37A5))
 			assertWordsEqual(t, model.ReadWos(s, a, 2), []uint16{0xC80F, 0x37A5})
 
 			a += 2
@@ -174,13 +175,13 @@ func testModelMaster(t *testing.T, model Model, master CloseableMaster) {
 }
 
 func testWriteDos(t *testing.T, model Model, master Master, s byte, a uint16, values ...bool) {
-	ifErrFatal(t, master.WriteDos(s, a, values...))
+	fatalIfError(t, master.WriteDos(s, a, values...))
 	bools := model.ReadDos(s, a, uint16(len(values)))
 	assertBoolsEqual(t, values, bools)
 }
 
 func testWriteWos(t *testing.T, model Model, master Master, s byte, a uint16, values ...uint16) {
-	ifErrFatal(t, master.WriteWos(s, a, values...))
+	fatalIfError(t, master.WriteWos(s, a, values...))
 	words := model.ReadWos(s, a, uint16(len(values)))
 	assertWordsEqual(t, values, words)
 }
@@ -366,7 +367,7 @@ func logPanic() {
 	}
 }
 
-func ifErrFatal(t *testing.T, err error) {
+func fatalIfError(t *testing.T, err error) {
 	if err != nil {
 		t.Fatal(err)
 	}

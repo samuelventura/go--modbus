@@ -3,11 +3,18 @@ package modbus
 import (
 	"fmt"
 	"log"
+	"os"
 	"runtime/debug"
 	"time"
 )
 
 var traceEnabled = false
+
+func init() {
+	if os.Getenv("GO_MODBUS_TRACE") == "true" {
+		traceEnabled = true
+	}
+}
 
 func trace(args ...interface{}) {
 	if traceEnabled {
