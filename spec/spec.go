@@ -232,11 +232,11 @@ func testWords(t *testing.T, model modbus.Model, master modbus.Master, s byte, a
 
 //SLAVE////////////////////////////
 
-type exceptionExecutor struct {
+type ExceptionExecutor struct {
 	exec modbus.Executor
 }
 
-func (e *exceptionExecutor) Execute(ci *modbus.Command) (co *modbus.Command, err error) {
+func (e *ExceptionExecutor) Execute(ci *modbus.Command) (co *modbus.Command, err error) {
 	if ci.Slave == 0xFF && ci.Address == 0xFFFF {
 		err = formatErr("Exception")
 		return
@@ -252,7 +252,7 @@ func setupMasterSlave(proto modbus.Protocol) (model modbus.Model, master modbus.
 	port := listen.Addr().(*net.TCPAddr).Port
 	model = modbus.NewMapModel()
 	exec := modbus.NewModelExecutor(model)
-	execw := &exceptionExecutor{exec}
+	execw := &ExceptionExecutor{exec}
 	go func() {
 		defer listen.Close()
 		input, err := listen.Accept()
