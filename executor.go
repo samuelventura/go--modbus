@@ -5,8 +5,8 @@ import (
 	"io"
 )
 
-// Implementes: Executor
-// Aplies commands to a model
+// Implements: Executor
+// Applies commands to a model
 type modelExecutor struct {
 	model Model
 }
@@ -49,8 +49,8 @@ func (m *ModbusException) Error() string {
 	return fmt.Sprintf("modbus exception %02x", m.Code)
 }
 
-// Implementes: Executor, ClosableExecutor
-// Aplies commands to a transport
+// Implements: Executor, ClosableExecutor
+// Applies commands to a transport
 type transportExecutor struct {
 	io.Closer
 	proto Protocol
